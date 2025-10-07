@@ -1,0 +1,53 @@
+name: Publish workers-satori to npm
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch: {}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js and pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck workers-satori
+        run: pnpm --filter ./packages/workers-satori run ts
+
+      - name: Build workers-satori
+        run: pnpm --filter ./packages/workers-satori run build
+
+      - name: Verify tag matches package version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          echo "GITHUB_REF=$GITHUB_REF"
+          GIT_TAG=${GITHUB_REF#refs/tags/}
+          PKG_VERSION=$(node -e "console.log(JSON.parse(require('fs').readFileSync('packages/workers-satori/package.json','utf8')).version)")
+          echo "Tag: $GIT_TAG, Package version: $PKG_VERSION"
+          if [ "$GIT_TAG" != "v$PKG_VERSION" ]; then echo "Tag ($GIT_TAG) does not match package version (v$PKG_VERSION)"; exit 1; fi
+
+      - name: Setup npm auth
+        uses: actions/setup-node@v5
+        with:
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Publish package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        working-directory: packages/workers-satori
+        run: pnpm publish --access public --no-git-checks
+
