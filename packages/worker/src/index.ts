@@ -9,7 +9,7 @@
  */
 
 // import { ImageResponse } from "workers-og";
-import { ImageResponse } from "../../workers-og/src/index";
+import { ImageResponse } from "../../workers-satori/src/index";
 import { handleBucketRequest } from "./bucket";
 import { corsHeaders } from "./cors";
 import { template } from "./template";
